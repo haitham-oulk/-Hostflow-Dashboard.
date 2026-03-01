@@ -7,7 +7,7 @@ import Bookings from '@/pages/Bookings'
 import CalendarPage from '@/pages/Calendar'
 import PricingSimulator from '@/pages/PricingSimulator'
 import Finance from '@/pages/Finance'
-import Tasks from '@/pages/Tasks'
+import Housekeeping from '@/pages/Housekeeping'
 import Documents from '@/pages/Documents'
 import Partners from '@/pages/Partners'
 import Settings from '@/pages/Settings'
@@ -34,7 +34,7 @@ export default function App() {
                             <Route path="/calendar" element={<CalendarPage />} />
                             <Route path="/pricing" element={<PricingSimulator />} />
                             <Route path="/finance" element={<Finance />} />
-                            <Route path="/tasks" element={<Tasks />} />
+                            <Route path="/housekeeping" element={<Housekeeping />} />
                             <Route path="/reviews" element={<Reviews />} />
                             <Route path="/partners" element={<Partners />} />
                             <Route path="/properties" element={<Properties />} />
