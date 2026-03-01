@@ -69,8 +69,13 @@ export default function CalendarPage() {
     const events = useMemo(() => {
         const list: any[] = []
         bookings.forEach(b => {
+            if (!b.check_in || !b.check_out) return // Skip incomplete dates
+
             const checkInD = new Date(b.check_in)
             const checkOutD = new Date(b.check_out)
+            const nights = Math.max(1, Math.ceil((checkOutD.getTime() - checkInD.getTime()) / (1000 * 60 * 60 * 24)))
+
+            b.calculated_nights = nights // Store for the details sheet
 
             // 1. Guest Arrival
             if (checkInD.getFullYear() === year && checkInD.getMonth() === month) {
@@ -78,7 +83,7 @@ export default function CalendarPage() {
                     id: `${b.id}-in`,
                     bookingId: b.id,
                     day: checkInD.getDate(),
-                    title: `Arrival: ${b.hosted_names || 'Guest'}`,
+                    title: `Arrivée: ${b.guest_name || 'Client'}`,
                     type: 'guest_arrival',
                     time: '15:00',
                     raw: b
@@ -90,14 +95,14 @@ export default function CalendarPage() {
                     id: `${b.id}-out`,
                     bookingId: b.id,
                     day: checkOutD.getDate(),
-                    title: `Housekeeping: ${b.hosted_names || 'Guest'}`,
+                    title: `Ménage: ${b.guest_name || 'Client'}`,
                     type: 'housekeeping',
                     time: '11:00',
                     raw: b
                 })
             }
             // 3. Reserved
-            for (let i = 1; i <= (b.nights || 1); i++) {
+            for (let i = 1; i <= nights; i++) {
                 const stayDate = new Date(checkInD)
                 stayDate.setDate(checkInD.getDate() + i)
                 if (stayDate.getFullYear() === year && stayDate.getMonth() === month && stayDate < checkOutD) {
@@ -105,7 +110,7 @@ export default function CalendarPage() {
                         id: `${b.id}-stay-${i}`,
                         bookingId: b.id,
                         day: stayDate.getDate(),
-                        title: `Stay: ${b.hosted_names || 'Guest'}`,
+                        title: `Séjour: ${b.guest_name || 'Client'}`,
                         type: 'reserved',
                         time: 'All Day',
                         raw: b
@@ -384,18 +389,18 @@ export default function CalendarPage() {
                         <>
                             <SheetHeader className="mb-6">
                                 <div className="flex items-center justify-between">
-                                    <SheetTitle className="text-xl font-heading font-bold text-slate-900">{selectedBooking.hosted_names || 'Guest'}</SheetTitle>
+                                    <SheetTitle className="text-xl font-heading font-bold text-slate-900">{selectedBooking.guest_name || 'Client'}</SheetTitle>
                                     <Badge variant="outline" className={cn(
                                         "capitalize px-3 py-1 text-xs font-semibold shadow-sm",
                                         selectedBooking.platform?.toLowerCase() === 'airbnb' ? "bg-rose-50 text-rose-600 border-rose-200" :
-                                            selectedBooking.platform?.toLowerCase() === 'booking' ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                            selectedBooking.platform?.toLowerCase() === 'booking.com' ? "bg-blue-50 text-blue-600 border-blue-200" :
                                                 "bg-emerald-50 text-emerald-600 border-emerald-200"
                                     )}>
                                         {selectedBooking.platform}
                                     </Badge>
                                 </div>
                                 <SheetDescription className="text-slate-500 font-medium">
-                                    {new Date(selectedBooking.check_in).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} → {new Date(selectedBooking.check_out).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} ({selectedBooking.nights} nuits)
+                                    {new Date(selectedBooking.check_in).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} → {new Date(selectedBooking.check_out).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} ({selectedBooking.calculated_nights} nuits)
                                 </SheetDescription>
                             </SheetHeader>
 
@@ -409,11 +414,11 @@ export default function CalendarPage() {
                                     <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
                                         <div>
                                             <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Téléphone</p>
-                                            <p className="font-medium text-slate-800">{selectedBooking.phone || 'N/A'}</p>
+                                            <p className="font-medium text-slate-800">-</p>
                                         </div>
                                         <div>
                                             <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Email</p>
-                                            <p className="font-medium truncate text-slate-800">{selectedBooking.email || 'N/A'}</p>
+                                            <p className="font-medium truncate text-slate-800">-</p>
                                         </div>
                                         <div>
                                             <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Nationalité</p>
@@ -421,7 +426,7 @@ export default function CalendarPage() {
                                         </div>
                                         <div>
                                             <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Voyageurs</p>
-                                            <p className="font-medium text-slate-800">{selectedBooking.number_of_guest || 1} personne(s)</p>
+                                            <p className="font-medium text-slate-800">{selectedBooking.number_of_guests || 1} personne(s)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -434,23 +439,17 @@ export default function CalendarPage() {
                                             Détails Financiers
                                         </h3>
                                         <span className={cn(
-                                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
-                                            selectedBooking.payout_status === 'paid' ? "bg-emerald-100 text-emerald-700" :
-                                                selectedBooking.payout_status === 'pending' ? "bg-amber-100 text-amber-700" :
-                                                    "bg-blue-100 text-blue-700"
+                                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize",
+                                            selectedBooking.status?.toLowerCase() === 'payé' ? "bg-emerald-100 text-emerald-700" :
+                                                "bg-amber-100 text-amber-700"
                                         )}>
-                                            {selectedBooking.payout_status}
+                                            {selectedBooking.status || 'En attente'}
                                         </span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4 text-sm bg-emerald-50/50 p-4 rounded-xl border border-emerald-100/50">
                                         <div>
-                                            <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Montant Brut</p>
-                                            <p className="font-heading font-semibold text-base text-slate-800">{formatMAD(selectedBooking.total_amount_mad || 0)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Net à percevoir</p>
-                                            <p className="font-heading font-bold text-lg text-emerald-600">{formatMAD(selectedBooking.net_payout_mad || 0)}</p>
-                                            <p className="text-[10px] text-emerald-600/70 font-medium">Commissions déduites</p>
+                                            <p className="text-slate-500 text-[11px] uppercase tracking-wider font-semibold mb-1">Prix Net</p>
+                                            <p className="font-heading font-semibold text-base text-slate-800">{formatMAD(selectedBooking.net_price || 0)}</p>
                                         </div>
                                     </div>
                                 </div>

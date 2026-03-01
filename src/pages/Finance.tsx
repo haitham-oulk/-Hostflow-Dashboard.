@@ -19,17 +19,7 @@ function formatMAD(value: number) {
     }).format(value) + ' MAD'
 }
 
-/* ── MOCK DATA FOR THE AREA CHART (HISTORICAL EXTRACT) ── */
-// (Since we don't have months of historical DB data yet, we keep the area chart mock for immediate visual satisfaction)
-const evolutionData = [
-    { name: 'Jan', revenue: 24000 },
-    { name: 'Fév', revenue: 13980 },
-    { name: 'Mar', revenue: 38000 },
-    { name: 'Avr', revenue: 39080 },
-    { name: 'Mai', revenue: 48000 },
-    { name: 'Juin', revenue: 38000 },
-    { name: 'Juil', revenue: 43000 },
-]
+
 
 const donutColors = ['#f43f5e', '#3b82f6', '#10b981'] // Airbnb (Rose), Booking (Blue), Direct (Green)
 
@@ -54,13 +44,20 @@ export default function Finance() {
     const [donutData, setDonutData] = useState<any[]>([])
     const [canalBarData, setCanalBarData] = useState<any[]>([])
     const [performanceData, setPerformanceData] = useState<any>({ airbnb: { brut: 0, net: 0, frais: 0 }, booking: { brut: 0, net: 0, frais: 0 } })
+    const [evolutionData, setEvolutionData] = useState<any[]>([])
 
     useEffect(() => {
         async function loadFinance() {
             setLoading(true)
             try {
                 // Fetch all bookings to calculate metrics
-                const { data } = await supabase.from('bookings').select('*').order('created_at', { ascending: false })
+                const { data, error } = await supabase.from('bookings').select('*').order('check_in', { ascending: false })
+
+                if (error) {
+                    console.error("Erreur détaillée Supabase (Finance.tsx):", error)
+                }
+
+                console.log("Données reçues dans Finance.tsx:", data)
 
                 if (!data || data.length === 0) {
                     setLoading(false)
@@ -79,21 +76,31 @@ export default function Finance() {
                 let perfAirbnb = { brut: 0, net: 0, frais: 0 }
                 let perfBooking = { brut: 0, net: 0, frais: 0 }
 
+                // Monthly aggregation for Area chart
+                const monthlyRev: Record<string, { name: string, revenue: number, _sort: string }> = {}
+
                 data.forEach(b => {
-                    const bBrut = Number(b.total_amount_mad || 0)
-                    const bNet = Number(b.net_payout_mad || 0)
-                    const bComms = Number(b.commission_amount_mad || 0)
-                    const bTax = Number(b.city_tax_mad || 0)
+                    const bNet = Number(b.net_price || 0)
+                    const bBrut = bNet // Simplified since we don't have gross in schema
+                    const bComms = 0
+                    const bTax = 0
+
+                    let bNights = 0
+                    if (b.check_in && b.check_out) {
+                        const cin = new Date(b.check_in)
+                        const cout = new Date(b.check_out)
+                        bNights = Math.max(0, Math.ceil((cout.getTime() - cin.getTime()) / (1000 * 60 * 60 * 24)))
+                    }
 
                     brut += bBrut
                     net += bNet
                     comms += bComms
                     taxes += bTax
-                    nights += Number(b.nights || 0)
-                    cleaning += Number(b.cleaning_fee_mad || 0)
+                    nights += bNights
+                    cleaning += 0 // no cleaning fee in current schema
 
-                    if (b.payout_status?.toLowerCase() === 'paid') paid += bNet
-                    if (b.payout_status?.toLowerCase() === 'pending' || b.payout_status?.toLowerCase() === 'processing') pending += bNet
+                    if (b.status?.toLowerCase() === 'payé') paid += bNet
+                    if (b.status?.toLowerCase() === 'en attente') pending += bNet
 
                     // Channel grouping
                     const platform = (b.platform || '').toLowerCase()
@@ -105,7 +112,21 @@ export default function Finance() {
                         revBooking += bNet
                         perfBooking.brut += bBrut; perfBooking.net += bNet; perfBooking.frais += bComms;
                     }
-                    else revDirect += bNet
+                    else {
+                        revDirect += bNet
+                    }
+
+                    // Monthly evolution
+                    if (b.check_in) {
+                        const date = new Date(b.check_in)
+                        const yyyyMm = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                        const monthName = date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+                        const name = monthName.charAt(0).toUpperCase() + monthName.slice(1)
+                        if (!monthlyRev[yyyyMm]) {
+                            monthlyRev[yyyyMm] = { name, revenue: 0, _sort: yyyyMm }
+                        }
+                        monthlyRev[yyyyMm].revenue += bNet
+                    }
                 })
 
                 setTotalBrut(brut); setTotalNet(net); setTotalCommissions(comms); setTotalTaxes(taxes);
@@ -132,6 +153,11 @@ export default function Finance() {
                 setPerformanceData({ airbnb: perfAirbnb, booking: perfBooking })
                 setRecentPayouts(data.slice(0, 10)) // Top 10 for the table
 
+                // Set Evolution data (sorted chronologically)
+                const evoData = Object.values(monthlyRev).sort((a, b) => a._sort.localeCompare(b._sort))
+                // Clean up the `_sort` property to match interface if strict, or just leave it
+                setEvolutionData(evoData.map(e => ({ name: e.name, revenue: e.revenue })))
+
             } catch (err) {
                 console.error(err)
             } finally {
@@ -155,9 +181,8 @@ export default function Finance() {
 
     function StatusBadge({ status }: { status: string }) {
         const s = (status || '').toLowerCase()
-        if (s === 'paid') return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100"><BadgeCheck className="w-3.5 h-3.5" /> Payé</span>
-        if (s === 'pending') return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100"><AlertCircle className="w-3.5 h-3.5" /> En attente</span>
-        if (s === 'processing') return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100"><Loader2 className="w-3.5 h-3.5 animate-spin" /> En cours</span>
+        if (s === 'payé') return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100"><BadgeCheck className="w-3.5 h-3.5" /> Payé</span>
+        if (s === 'en attente') return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-100"><AlertCircle className="w-3.5 h-3.5" /> En attente</span>
         return <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 capitalize">{status || 'Inconnu'}</span>
     }
 
@@ -400,22 +425,22 @@ export default function Finance() {
                                         {row.check_out ? new Date(row.check_out).toLocaleDateString('fr-FR') : '—'}
                                     </td>
                                     <td className="px-6 py-4 text-slate-600 font-medium">
-                                        {row.hosted_names || `BK-${String(row.id).slice(0, 6)}`}
+                                        {row.guest_name || `BK-${String(row.id).slice(0, 6)}`}
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={cn(
                                             "font-semibold capitalize",
                                             row.platform?.toLowerCase() === 'airbnb' ? "text-rose-500" :
-                                                row.platform?.toLowerCase() === 'booking' ? "text-blue-500" : "text-emerald-500"
+                                                row.platform?.toLowerCase() === 'booking.com' ? "text-blue-500" : "text-emerald-500"
                                         )}>
                                             {row.platform || 'Direct'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-heading font-bold text-slate-900 text-right">
-                                        {formatMAD(Number(row.net_payout_mad || 0))}
+                                        {formatMAD(Number(row.net_price || 0))}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <StatusBadge status={row.payout_status} />
+                                        <StatusBadge status={row.status} />
                                     </td>
                                 </tr>
                             ))}

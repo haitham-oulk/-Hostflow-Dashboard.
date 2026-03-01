@@ -9,6 +9,10 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
     BarChart, Bar, Cell
 } from 'recharts'
+import {
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 
 /* ── Types ── */
 interface KPI {
@@ -58,6 +62,7 @@ export default function Dashboard() {
     const [occupancyRate, setOccupancyRate] = useState(0)
     const [todayCheckins, setTodayCheckins] = useState(0)
     const [totalNights, setTotalNights] = useState(0)
+    const [recentBookings, setRecentBookings] = useState<any[]>([])
 
     async function fetchDashboardData() {
         setLoading(true)
@@ -69,30 +74,33 @@ export default function Dashboard() {
             const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
 
             // 1. Total revenue
-            const { data: revData } = await supabase.from('bookings').select('net_payout_mad').eq('payout_status', 'paid')
-            setRevenue((revData || []).reduce((sum, b) => sum + Number(b.net_payout_mad || 0), 0))
+            const { data: revData } = await supabase.from('bookings').select('net_price').ilike('status', 'payé')
+            setRevenue((revData || []).reduce((sum, b) => sum + Number(b.net_price || 0), 0))
 
             // 2. Bookings count
             const { count: bCount } = await supabase.from('bookings').select('*', { count: 'exact', head: true })
             setBookingsCount(bCount || 0)
 
             // 3. Pending payments
-            const { data: payData } = await supabase.from('bookings').select('net_payout_mad').eq('payout_status', 'pending')
-            setPaymentsPending((payData || []).reduce((sum, b) => sum + Number(b.net_payout_mad || 0), 0))
+            const { data: payData } = await supabase.from('bookings').select('net_price').ilike('status', 'en attente')
+            setPaymentsPending((payData || []).reduce((sum, b) => sum + Number(b.net_price || 0), 0))
 
             // 4. Occupancy rate & Nights
             const { data: monthBookings } = await supabase
                 .from('bookings')
-                .select('check_in, check_out, nights')
+                .select('check_in, check_out')
                 .lte('check_in', endOfMonth)
                 .gte('check_out', startOfMonth)
 
             let bookedNights = 0
             let allNights = 0
             for (const b of monthBookings || []) {
-                allNights += Number(b.nights || 0)
                 const cin = new Date(b.check_in)
                 const cout = new Date(b.check_out)
+
+                const diffAll = Math.max(0, Math.ceil((cout.getTime() - cin.getTime()) / (1000 * 60 * 60 * 24)))
+                allNights += diffAll
+
                 const start = cin < new Date(startOfMonth) ? new Date(startOfMonth) : cin
                 const end = cout > new Date(endOfMonth + 'T23:59:59') ? new Date(endOfMonth + 'T23:59:59') : cout
                 const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
@@ -104,6 +112,14 @@ export default function Dashboard() {
             // 5. Check-ins
             const { count: cCount } = await supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('check_in', today)
             setTodayCheckins(cCount || 0)
+
+            // 6. Recent Bookings
+            const { data: recent } = await supabase
+                .from('bookings')
+                .select('*')
+                .order('check_in', { ascending: false })
+                .limit(5)
+            setRecentBookings(recent || [])
 
         } catch (err) {
             console.error('API Error:', err)
@@ -251,6 +267,74 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+            </div>
+
+            {/* Recent Bookings Table */}
+            <div className="rounded-[20px] border border-slate-100 bg-white p-6 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-lg font-heading font-semibold text-slate-900">Réservations récentes</h2>
+                        <p className="text-sm text-slate-500">Les dernières réservations ajoutées</p>
+                    </div>
+                </div>
+                {loading ? (
+                    <div className="h-40 flex items-center justify-center animate-pulse text-slate-400">Chargement...</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Client</TableHead>
+                                    <TableHead>Plateforme</TableHead>
+                                    <TableHead>Arrivée</TableHead>
+                                    <TableHead>Départ</TableHead>
+                                    <TableHead>Nuitées</TableHead>
+                                    <TableHead>Total Net</TableHead>
+                                    <TableHead>Statut</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {recentBookings.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                                            Aucune réservation trouvée.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    recentBookings.map((b) => {
+                                        let nights = 0
+                                        if (b.check_in && b.check_out) {
+                                            const start = new Date(b.check_in)
+                                            const end = new Date(b.check_out)
+                                            nights = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+                                        }
+                                        return (
+                                            <TableRow key={b.id}>
+                                                <TableCell className="font-medium">{b.guest_name}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={b.platform?.toLowerCase() === 'airbnb' ? 'airbnb' : b.platform?.toLowerCase() === 'direct' ? 'direct' : 'booking'} className="capitalize">
+                                                        {b.platform}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">{b.check_in}</TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">{b.check_out}</TableCell>
+                                                <TableCell>{nights}</TableCell>
+                                                <TableCell className="font-medium text-emerald-600">
+                                                    {b.net_price ? formatMAD(Number(b.net_price)) : '-'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={b.status?.toLowerCase() === 'payé' ? 'success' : 'warning'} className="capitalize">
+                                                        {b.status || 'en attente'}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
             </div>
         </div>
     )
