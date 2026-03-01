@@ -1,0 +1,16 @@
+Hosted names,Phone,Email,Nationality,Number of guest,Platforme booked,Check-in,Check-out,Net
+Sarah Afouf,+33612345678,sarah.afouf@gmail.com,French,5,booking,27/07/2025,30/07/2025,2282
+Hanaa charradi Bachri,+33698765432,hanaa.bachri@email.com,French,6,booking,30/07/2025,31/07/2025,761
+Hanaa charradi Bachri,+33698765432,hanaa.bachri@email.com,French,6,booking,31/07/2025,01/08/2025,761
+Hajar Mesnani,+32456789012,hajar.mesnani@email.com,Belgian,7,booking,01/08/2025,03/08/2025,1691
+Tarik Karak,+212612345678,tarik.karak@gmail.com,Moroccan,6,booking,03/08/2025,06/08/2025,2536
+Mouad Raibati,+212698765432,mouad.raibati@email.com,Moroccan,4,airbnb,06/08/2025,09/08/2025,2765
+Farah Charkaoui,+33756789012,farah.charkaoui@email.com,French,5,airbnb,09/08/2025,11/08/2025,1649
+Mohamed Boumhand,+31612345678,m.boumhand@email.com,Dutch,6,airbnb,11/08/2025,14/08/2025,2474
+Younes El Azzioui,+33734567890,younes.elazzioui@email.com,French,4,airbnb,14/08/2025,15/08/2025,679
+HINDOUN YAHYA,+212678901234,hindoun.yahya@email.com,Moroccan,7,direct reservation,21/08/2025,24/08/2025,2550
+HABIB,+212690123456,habib.contact@email.com,Moroccan,7,direct reservation,25/08/2025,31/08/2025,4900
+HABIB,+212690123456,habib.contact@email.com,Moroccan,7,direct reservation,31/08/2025,01/09/2025,700
+Achraf El Kamoune,+212645678901,achraf.kamoune@email.com,Moroccan,6,airbnb,01/09/2025,04/09/2025,1455
+Invalid Row Missing Phone,,missing@email.com,French,2,booking,01/10/2025,03/10/2025,500
+Another Invalid,+33600000000,,French,2,booking,01/10/2025,03/10/2025,500

@@ -1,0 +1,190 @@
+%% ============================================================
+%% GEMINI.MMD — Constitution du projet Hostflow
+%% Framework BLAST | Architecture Data-First
+%% Dernière mise à jour : 2026-03-01
+%% ============================================================
+
+%% ============================================================
+%% 1. SCHÉMA CONCEPTUEL DE DONNÉES (Source of Truth: Supabase)
+%% ============================================================
+
+erDiagram
+    PROPERTY {
+        uuid id PK
+        text name
+        text address
+        text city
+        text type "apartment | villa | riad"
+        int bedrooms
+        int max_guests
+        decimal cleaning_fee_mad
+        decimal city_tax_per_night_mad
+        timestamp created_at
+    }
+
+    BOOKING {
+        uuid id PK
+        uuid property_id FK
+        uuid guest_id FK
+        text platform "airbnb | booking | direct"
+        date check_in
+        date check_out
+        int nights "calculated"
+        int num_guests
+        decimal gross_price_mad
+        decimal platform_commission_pct
+        decimal net_payout_mad
+        text payout_status "pending | paid | overdue"
+        date expected_payout_date
+        text source "manual | csv_import | api"
+        jsonb raw_csv_row "nullable"
+        timestamp created_at
+    }
+
+    GUEST {
+        uuid id PK
+        text full_name
+        text email
+        text phone
+        text nationality
+        text id_document_type "passport | cin | permit"
+        text id_document_url "Supabase Storage"
+        text marriage_cert_url "nullable, Supabase Storage"
+        jsonb notes
+        timestamp created_at
+    }
+
+    PAYOUT {
+        uuid id PK
+        uuid booking_id FK
+        decimal amount_mad
+        decimal amount_eur "nullable"
+        decimal exchange_rate "nullable"
+        decimal bank_fees_mad "detected"
+        text invoice_pdf_url "Supabase Storage"
+        text audit_status "pending | verified | flagged"
+        jsonb audit_notes "AI Payout Auditor output"
+        date payout_date
+        timestamp created_at
+    }
+
+    DOCUMENT {
+        uuid id PK
+        uuid guest_id FK
+        uuid booking_id FK "nullable"
+        text doc_type "id_card | passport | marriage_cert | police_form"
+        text file_url "Supabase Storage"
+        text status "uploaded | verified | expired"
+        timestamp uploaded_at
+    }
+
+    MESSAGE {
+        uuid id PK
+        uuid guest_id FK
+        uuid booking_id FK "nullable"
+        text channel "whatsapp | airbnb | email | sms"
+        text direction "inbound | outbound"
+        text body
+        text ai_draft "nullable — AI suggestion"
+        boolean is_read
+        timestamp sent_at
+    }
+
+    EXCHANGE_RATE {
+        uuid id PK
+        text from_currency "EUR"
+        text to_currency "MAD"
+        decimal rate
+        text source "xe.com | manual"
+        timestamp fetched_at
+    }
+
+    TASK {
+        uuid id PK
+        uuid booking_id FK
+        uuid property_id FK
+        text type "cleaning | key_handoff | inspection"
+        text status "todo | in_progress | done"
+        date due_date
+        text assigned_to "nullable"
+        text notes
+        timestamp created_at
+    }
+
+    %% Relations
+    PROPERTY ||--o{ BOOKING : "has"
+    GUEST ||--o{ BOOKING : "makes"
+    BOOKING ||--o{ PAYOUT : "generates"
+    BOOKING ||--o{ TASK : "triggers"
+    BOOKING ||--o{ DOCUMENT : "may have"
+    GUEST ||--o{ DOCUMENT : "uploads"
+    GUEST ||--o{ MESSAGE : "exchanges"
+    BOOKING ||--o{ MESSAGE : "references"
+    PROPERTY ||--o{ TASK : "requires"
+
+%% ============================================================
+%% 2. RÈGLES COMPORTEMENTALES (Business Logic)
+%% ============================================================
+
+%% RULE-001: Calcul inversé du prix
+%% SI l'utilisateur veut un net de X MAD :
+%%   - Prix Airbnb  = X / (1 - 0.03)   → commission 3%
+%%   - Prix Booking = X / (1 - 0.22)   → commission 22%
+%%   - Prix Direct  = X                → pas de commission
+
+%% RULE-002: Statut de paiement
+%% Airbnb  → payout attendu 24h après check-in
+%% Booking → payout attendu J+15 après check-out
+%% Direct  → payout immédiat (statut "paid" dès creation)
+
+%% RULE-003: Tâches automatiques
+%% À la création d'une réservation :
+%%   - Créer une tâche "cleaning" due à check-out
+%%   - Créer une tâche "key_handoff" due à check-in
+
+%% RULE-004: Détection frais bancaires
+%% SI payout_eur * exchange_rate_officiel ≠ payout_mad (tolérance ±0.5%) :
+%%   → Marquer bank_fees_mad = différence
+%%   → Ajouter alerte "frais cachés détectés"
+
+%% RULE-005: Conformité invité
+%% Un invité ne peut PAS avoir le statut "verified" sans :
+%%   - Au moins 1 document de type "id_card" ou "passport" avec status "verified"
+%%   - Si nationalité marocaine ET couple → certificat de mariage requis
+
+%% RULE-006: Devise
+%% Devise principale = MAD (Dirham marocain)
+%% EUR stocké uniquement pour comparaison et audit
+
+%% ============================================================
+%% 3. ARCHITECTURE HAUT NIVEAU
+%% ============================================================
+
+graph TD
+    subgraph Frontend ["Frontend (React/Vite/Tailwind)"]
+        UI[Pages & Composants]
+        HOOKS[Custom Hooks]
+        STATE[State Management]
+    end
+
+    subgraph Backend ["Backend (Supabase)"]
+        AUTH[Supabase Auth]
+        DB[PostgreSQL]
+        STORAGE[Supabase Storage]
+        EDGE[Edge Functions]
+    end
+
+    subgraph Integrations ["Intégrations externes"]
+        ZAPIER[Zapier MCP]
+        XE[xe.com API]
+        AI[AI Payout Auditor]
+    end
+
+    UI --> HOOKS
+    HOOKS --> STATE
+    STATE --> DB
+    UI --> AUTH
+    UI --> STORAGE
+    EDGE --> AI
+    ZAPIER --> DB
+    XE --> DB
