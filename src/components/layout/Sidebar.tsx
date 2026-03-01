@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
     LayoutDashboard, CalendarDays, Users, Calculator,
-    DollarSign, Building2, Wrench, Star, Key, Home
+    DollarSign, Building2, Wrench, Star, Key, Home, MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useState } from 'react'
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Tableau de Bord' },
     { to: '/calendar', icon: CalendarDays, label: 'Calendrier' },
+    { to: '/messages', icon: MessageSquare, label: 'Messagerie' },
     { to: '/guests', icon: Users, label: 'IDs Clients' },
     { to: '/pricing', icon: Calculator, label: 'Simulateur Prix' },
     { to: '/finance', icon: DollarSign, label: 'Finance' },
