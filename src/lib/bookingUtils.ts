@@ -51,7 +51,61 @@ function derivePayoutInfo(platform: Platform, checkOut: Date): { payoutStatus: '
     return { payoutStatus: 'expected', expectedPayoutDate: next.toISOString().slice(0, 10) }
 }
 
+export interface BookingInput {
+    platform: Platform
+    guestName: string
+    checkIn: string
+    checkOut: string
+    guestsCount: number
+    payoutAmount: number
+    status: import('@/mock/types').BookingStatus
+}
+
+export function createBookingFromInput(input: BookingInput): { booking: Booking, task: Task } {
+    const bookingId = uuid()
+    const guestId = uuid()
+
+    // Create UTC dates to avoid local timezone offset issues
+    const checkInDate = new Date(`${input.checkIn}T00:00:00Z`)
+    const checkOutDate = new Date(`${input.checkOut}T00:00:00Z`)
+    const nights = calculateNights(checkInDate, checkOutDate)
+
+    const { payoutStatus, expectedPayoutDate } = derivePayoutInfo(input.platform, checkOutDate)
+    const profit = input.payoutAmount - CLEANING_COST
+
+    const booking: Booking = {
+        id: bookingId,
+        guestId,
+        guestName: input.guestName,
+        phone: '',
+        email: '',
+        nationality: '',
+        platform: input.platform,
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        nights,
+        guestsCount: input.guestsCount,
+        payoutAmount: input.payoutAmount,
+        profit,
+        payoutStatus,
+        expectedPayoutDate,
+        status: input.status,
+    }
+
+    const task: Task = {
+        id: uuid(),
+        type: 'cleaning',
+        title: `Cleaning: ${input.guestName}`,
+        dueAt: input.checkOut,
+        status: 'todo',
+        bookingId: bookingId,
+    }
+
+    return { booking, task }
+}
+
 // ─── CSV Parsing ──────────────────────────────────────────────────────
+
 
 const REQUIRED_CSV = ['hosted names', 'number of guest', 'platforme booked', 'check-in', 'check-out', 'net'] as const
 

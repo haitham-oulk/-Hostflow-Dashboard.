@@ -28,7 +28,7 @@ export function AddBookingDialog({ open, onOpenChange, onBookingCreated }: AddBo
     const [error, setError] = useState('')
 
     const update = <K extends keyof BookingInput>(key: K, value: BookingInput[K]) => {
-        setForm((prev) => ({ ...prev, [key]: value }))
+        setForm((prev: BookingInput) => ({ ...prev, [key]: value }))
         setError('')
     }
 

@@ -2,6 +2,7 @@ export type Platform = 'booking' | 'airbnb' | 'direct'
 export type PayoutStatus = 'expected' | 'received'
 export type TaskType = 'cleaning' | 'key' | 'urgent'
 export type TaskStatus = 'todo' | 'done'
+export type BookingStatus = 'confirmed' | 'cancelled'
 
 export interface Booking {
     id: string
@@ -19,7 +20,7 @@ export interface Booking {
     profit: number
     payoutStatus: PayoutStatus
     expectedPayoutDate: string | null
-    status: 'confirmed'
+    status: BookingStatus
 }
 
 export interface Guest {
