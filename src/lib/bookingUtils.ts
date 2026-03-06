@@ -1,6 +1,23 @@
 import type { Booking, Guest, Platform, Task } from '@/mock/types'
 
-const CLEANING_COST = 200
+export const CLEANING_COST = 200
+
+/**
+ * Platform commission rates (%):
+ * Booking.com = 15%, Airbnb = 3%, Direct = 0%
+ */
+export function calcCommissionPct(platform: Platform): number {
+    if (platform === 'booking') return 15
+    if (platform === 'airbnb') return 3
+    return 0
+}
+
+/**
+ * Net payout = gross × (1 - commissionPct/100) - cleaningFee
+ */
+export function calcNetPayout(gross: number, commissionPct: number, cleaningFee = CLEANING_COST): number {
+    return Math.max(0, gross * (1 - commissionPct / 100) - cleaningFee)
+}
 
 let counter = Date.now()
 function uuid(): string {

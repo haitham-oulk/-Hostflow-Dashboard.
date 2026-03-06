@@ -1,9 +1,9 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { AlertCircle, FileText } from 'lucide-react'
-import { useBookingsContext } from '@/lib/useBookings'
+import { useStore } from '@/lib/store'
 
 export default function Documents() {
-    const { bookings } = useBookingsContext()
+    const { bookings } = useStore()
 
     return (
         <div className="space-y-6">

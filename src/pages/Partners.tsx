@@ -1,123 +1,68 @@
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Plus, UserPlus, Shield, XCircle } from 'lucide-react'
-import type { Partner } from '@/mock/types'
-import { formatDate } from '@/lib/utils'
+import { Key, Eye, BarChart2, FileText, Lock } from 'lucide-react'
 
-const permissionLabels = {
-    viewBookings: 'View bookings',
-    editBookings: 'Edit bookings',
-    viewFinance: 'View finance',
-    viewDocuments: 'View documents',
-    manageTasks: 'Manage tasks',
-}
+const READ_ONLY_FEATURES = [
+    { icon: BarChart2, title: 'Tableau de bord', desc: 'Vue lecture des revenus et KPIs' },
+    { icon: FileText, title: 'Réservations', desc: 'Consultation de l\'historique des séjours' },
+    { icon: Eye, title: 'Propriétés', desc: 'Informations sur les biens gérés' },
+]
 
 export default function Partners() {
-    const [partners, setPartners] = useState<Partner[]>([])
-    const [showAdd, setShowAdd] = useState(false)
-    const [newEmail, setNewEmail] = useState('')
-    const [newPerms, setNewPerms] = useState({ viewBookings: true, editBookings: false, viewFinance: false, viewDocuments: false, manageTasks: false })
-
-    const addPartner = () => {
-        if (!newEmail.trim()) return
-        const p: Partner = {
-            id: `P-${Date.now()}`, email: newEmail, status: 'active',
-            lastLogin: 'Never', permissions: { ...newPerms },
-        }
-        setPartners(prev => [...prev, p])
-        setNewEmail('')
-        setShowAdd(false)
-    }
-
-    const toggleStatus = (id: string) => {
-        setPartners(prev => prev.map(p => p.id === id ? { ...p, status: p.status === 'active' ? 'revoked' : 'active' } : p))
-    }
-
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Partner Access</h1>
-                    <p className="text-sm text-muted-foreground">Manage partner permissions</p>
-                </div>
-                <Button size="sm" className="gap-2" onClick={() => setShowAdd(true)}>
-                    <UserPlus className="h-3.5 w-3.5" /> Add Partner
-                </Button>
+        <div className="space-y-8 pb-8 max-w-2xl">
+            {/* Header */}
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">Accès Partenaires</h1>
+                <p className="text-sm text-slate-500 mt-0.5">Gérez l'accès en lecture seule pour vos investisseurs ou co-gestionnaires.</p>
             </div>
 
-            {/* Partners List */}
-            <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Permissions</TableHead>
-                                <TableHead>Last Login</TableHead>
-                                <TableHead></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {partners.map(p => (
-                                <TableRow key={p.id}>
-                                    <TableCell className="font-medium">{p.email}</TableCell>
-                                    <TableCell><Badge variant={p.status === 'active' ? 'success' : 'destructive'}>{p.status}</Badge></TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-wrap gap-1">
-                                            {Object.entries(p.permissions).filter(([, v]) => v).map(([k]) => (
-                                                <Badge key={k} variant="secondary" className="text-[10px]">{permissionLabels[k as keyof typeof permissionLabels]}</Badge>
-                                            ))}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">{p.lastLogin === 'Never' ? 'Never' : formatDate(p.lastLogin)}</TableCell>
-                                    <TableCell>
-                                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => toggleStatus(p.id)}>
-                                            {p.status === 'active' ? (
-                                                <><XCircle className="h-3 w-3 mr-1" /> Revoke</>
-                                            ) : (
-                                                <><Shield className="h-3 w-3 mr-1" /> Restore</>
-                                            )}
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-            {/* Add Partner Dialog */}
-            <Dialog open={showAdd} onOpenChange={setShowAdd}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add Partner</DialogTitle>
-                        <DialogDescription>Invite a partner with specific access permissions</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                        <div><Label>Email</Label><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="partner@example.com" className="mt-1" /></div>
-                        <Separator />
-                        <p className="text-sm font-medium">Permissions</p>
-                        <div className="space-y-3">
-                            {(Object.keys(permissionLabels) as (keyof typeof permissionLabels)[]).map(key => (
-                                <div key={key} className="flex items-center justify-between">
-                                    <Label className="text-sm">{permissionLabels[key]}</Label>
-                                    <Switch checked={newPerms[key]} onCheckedChange={v => setNewPerms(p => ({ ...p, [key]: v }))} />
-                                </div>
-                            ))}
-                        </div>
-                        <Button className="w-full" onClick={addPartner}>Send Invitation</Button>
+            {/* Coming soon banner */}
+            <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-8 text-white relative overflow-hidden">
+                <div className="absolute inset-0 opacity-5" style={{
+                    backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                    backgroundSize: '24px 24px',
+                }} />
+                <div className="relative">
+                    <div className="h-12 w-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4">
+                        <Key className="h-6 w-6 text-white" />
                     </div>
-                </DialogContent>
-            </Dialog>
+                    <h2 className="text-xl font-bold mb-2">Vue Partenaire — Bientôt disponible</h2>
+                    <p className="text-sm text-slate-300 max-w-sm">
+                        Invitez des investisseurs ou partenaires avec un accès sécurisé en lecture seule. Ils pourront suivre les performances sans pouvoir modifier les données.
+                    </p>
+                    <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-sm font-medium cursor-not-allowed select-none">
+                        <Lock className="h-4 w-4" />
+                        En cours de développement
+                    </div>
+                </div>
+            </div>
+
+            {/* What's included */}
+            <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">Ce que le partenaire pourra voir</p>
+                <div className="space-y-3">
+                    {READ_ONLY_FEATURES.map(f => (
+                        <div key={f.title} className="flex items-center gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                            <div className="h-10 w-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
+                                <f.icon className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <div>
+                                <p className="font-semibold text-sm text-slate-800">{f.title}</p>
+                                <p className="text-xs text-slate-400 mt-0.5">{f.desc}</p>
+                            </div>
+                            <div className="ml-auto">
+                                <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-medium border border-emerald-100">Inclus</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Locked invite form */}
+            <div className="rounded-2xl border border-dashed border-slate-200 p-8 flex flex-col items-center text-center">
+                <Lock className="h-8 w-8 text-slate-200 mb-3" />
+                <p className="text-sm font-medium text-slate-400">Invitation par lien — à venir</p>
+                <p className="text-xs text-slate-300 max-w-xs mt-1">Vous pourrez générer un lien d'accès sécurisé pour chaque partenaire avec une date d'expiration.</p>
+            </div>
         </div>
     )
 }

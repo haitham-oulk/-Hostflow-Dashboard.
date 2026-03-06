@@ -1,24 +1,23 @@
 import { NavLink } from 'react-router-dom'
 import {
     LayoutDashboard, CalendarDays, Users, Calculator,
-    DollarSign, Building2, Sparkles, Star, Key, Home, MessageSquare
+    DollarSign, Building2, Key, Home, BookOpen, BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useState } from 'react'
 
-/* ── Primary navigation mapping exact user request ── */
+/* ── 5 core pages only ── */
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Tableau de Bord' },
-    { to: '/calendar', icon: CalendarDays, label: 'Calendrier' },
-    { to: '/messages', icon: MessageSquare, label: 'Messagerie' },
-    { to: '/guests', icon: Users, label: 'IDs Clients' },
+    { to: '/bookings', icon: BookOpen, label: 'Réservations' },
+    { to: '/guests', icon: Users, label: 'Clients' },
     { to: '/pricing', icon: Calculator, label: 'Simulateur Prix' },
     { to: '/finance', icon: DollarSign, label: 'Finance' },
+    { to: '/analytics', icon: BarChart3, label: 'Analytiques' },
+    { to: '/calendar', icon: CalendarDays, label: 'Calendrier' },
     { to: '/properties', icon: Building2, label: 'Propriétés' },
-    { to: '/housekeeping', icon: Sparkles, label: 'Ménage' },
-    { to: '/reviews', icon: Star, label: 'Avis' },
     { to: '/partners', icon: Key, label: 'Accès Partenaires' },
 ]
 
@@ -30,7 +29,7 @@ function NavItem({ item, collapsed }: { item: typeof navItems[0]; collapsed: boo
             className={({ isActive }) => cn(
                 "group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                    ? "bg-rose-50/50 text-rose-500" // Red/coral text for active
+                    ? "bg-rose-50/50 text-rose-500"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
                 collapsed && "justify-center px-2"
             )}
@@ -44,7 +43,6 @@ function NavItem({ item, collapsed }: { item: typeof navItems[0]; collapsed: boo
                         )} />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                     </div>
-                    {/* The small red dot for active state */}
                     {!collapsed && isActive && (
                         <div className="h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
                     )}
@@ -59,11 +57,10 @@ export function Sidebar() {
 
     return (
         <aside className={cn(
-            "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-slate-200/60 transition-all duration-300",
-            "bg-white", // Pure white background
+            "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-slate-200/60 transition-all duration-300 bg-white",
             collapsed ? "w-[68px]" : "w-64"
         )}>
-            {/* Logo area */}
+            {/* Logo */}
             <div className="flex h-[72px] items-center gap-3 px-5">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white shadow-sm shadow-orange-500/20">
                     <Home className="h-4 w-4" />
@@ -84,7 +81,7 @@ export function Sidebar() {
                 </nav>
             </ScrollArea>
 
-            {/* Collapse toggle (optional footer area) */}
+            {/* Footer */}
             <div className="p-4 border-t border-slate-100">
                 <Button
                     variant="ghost"
